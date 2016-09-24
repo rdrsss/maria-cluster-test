@@ -22,9 +22,13 @@ RUN \
 	DEBIAN_FRONTEND=noninteractive apt-get install mariadb-server -y
 
 # Make volume
+VOLUME ["/etc/mysql", "/var/lib/mysql", "/data"]
 
 # Expose port
 EXPOSE 3306
+
+# Copy config file
+COPY my.cnf /etc/mysql/
 
 # Run
 CMD ["mysqld"]

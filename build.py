@@ -2,6 +2,8 @@
 import os, getopt, sys, subprocess
 
 IMAGE_NAME = "test_mariadb"
+OFFICIAL_IMAGE_NAME = "mariadb:latest"
+PASSWORD = "pass"
 
 def build_image():
     subprocess.call(["docker", "build", "-t", IMAGE_NAME, "."])
@@ -10,16 +12,17 @@ def delete_image():
     subprocess.call(["docker", "rmi", IMAGE_NAME])
 
 def start_cluster():
+    # Run each node on the same network so instances can connect to one another
     # Start cluster node
-    subprocess.call(["docker", "run", "--net=host", "-d", IMAGE_NAME, "mysqld","--wsrep-new-cluster", "--PORT 10666"]) 
+    subprocess.call(["docker", "run", "--network=bridge", "-d", "-p", "10666:3306", IMAGE_NAME, "mysqld","--wsrep-new-cluster"]) 
 
 def add_node():
     # Add node to default cluster
-    subprocess.call(["docker", "run", "-d", "-p", "10667:3306", IMAGE_NAME, "mysqld","--wsrep_cluster_address=gcomm://0.0.0.0:10666"]) 
+    subprocess.call(["docker", "run", "--network=bridge", "-d", "-p", "10667:3306", IMAGE_NAME, "mysqld","--wsrep_cluster_address=gcomm://172.17.0.2:3306"]) 
 
 def build_test_cluster():
-    start_cluster()
-    add_node()
+    subprocess.call(["docker", "run", "--name=maria_cluster_host" ,"--network=bridge", "-d", "-p", "10666:3306", IMAGE_NAME, "mysqld","--wsrep-new-cluster"]) 
+    subprocess.call(["docker", "run", "--network=bridge", "-d", "-p", "10667:3306", IMAGE_NAME, "mysqld","--wsrep_cluster_address=gcomm://maria_cluster_host:3306"]) 
 
 def usage():
     print "usage"
@@ -45,5 +48,6 @@ if __name__ == '__main__':
                 if a in ("delete"):
                     delete_image()
         if o in ("--start_cluster"):
-            start_cluster
-
+            start_cluster()
+        if o in ("--build_default"):
+            build_test_cluster()
