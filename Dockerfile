@@ -10,6 +10,9 @@ RUN \
 	groupadd -r mysql && \
 	useradd -r -g mysql mysql
 
+# run an update
+RUN apt-get update
+
 # Add maria depots
 RUN \
 	DEBIAN_FRONTEND=noninteractive apt-get install software-properties-common -y && \
