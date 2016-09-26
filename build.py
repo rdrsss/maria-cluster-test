@@ -15,7 +15,6 @@ OFFICIAL_IMAGE_NAME = "mariadb:latest"
 DEFAULT_PORT = 10666
 # Default password to save
 PASSWORD = "pass"
-
 # Cluster naming
 CLUSTER_PREFIX = "mariadb_cluster_"
 
@@ -67,23 +66,41 @@ def StartClusterNode(node_name, bind_port, ip_address):
         "mysqld",
         "--wsrep_cluster_address=gcomm://"+ip_address]) 
 
+# Parse containers from string buffer.
+def ParseContainerNames(strbuf):
+    if len(strbuf) == 0:
+        print("Zero len docker ps")
+    else:
+        # Parse output
+        container_names = []
+        #split lines
+        sp = strbuf.splitlines();
+        for line in sp:
+            # split string
+            fields = line.split()
+            for f in fields:
+                if CLUSTER_PREFIX in f:
+                    container_names.append(f)
+        return container_names
+    return []
+
 # Find all containers with cluster prefix
 def GetClusterContainerNames():
     ps = subprocess.Popen(("docker", "ps"), stdout=subprocess.PIPE)
     out, err = ps.communicate()
-    if len(out) == 0:
-        print("Zero len docker ps")
-    # Parse output
-    container_names = []
-    #split lines
-    sp = out.splitlines();
-    for line in sp:
-        # split string
-        fields = line.split()
-        for f in fields:
-            if CLUSTER_PREFIX in f:
-                container_names.append(f)
-    return container_names
+    return ParseContainerNames(out)
+    
+# Cleanup possible orphaned contianers
+def CleanupOrphaned():
+    ps = subprocess.Popen(("docker", "ps", "-a"), stdout=subprocess.PIPE)
+    out, err = ps.communicate()
+    names = ParseContainerNames(out)
+    if len(names) > 0:
+        print "Cleaning up container names ..."
+        for c in names:
+            subprocess.call(["docker", "rm"] + c)
+    else:
+        print "No containers found"
 
 # Start test cluster, bring up host and nodes to connect.
 def StartTestCluster(num_nodes):
@@ -110,21 +127,24 @@ def StopTestCluster():
     else:
         print "No containers to stop."
 
+# Display script usage
 def Usage():
     usage = """\
-        --help          : print out this usage text.
-        --image         : image options
-                          build (build docker image (rmi))
-                          delete (delete docker image (rmi))
-        --start-cluster : Start test cluster, brings up host, and nodes attached.
-        --stop-cluster  : Stop running test cluster.
+        --help                  : print out this usage text.
+        --image                 : image options
+                                  build (build docker image (rmi))
+                                  delete (delete docker image (rmi))
+        --start-cluster         : Start test cluster, brings up host, and nodes attached.
+        --stop-cluster          : Stop running test cluster.
+        --cleanup-containers    : Cleanup orphaned containers (rm)
     """
     print usage
 
+# Main
 if __name__ == '__main__':
     # Get opts
     try:
-        long_args = ["help", "image", "start-cluster", "stop-cluster"]
+        long_args = ["help", "image", "start-cluster", "stop-cluster", "cleanup-containers"]
         opts, args = getopt.getopt(sys.argv[1:], "be:he:s:c:r:", long_args)
         print "Opts : ", opts
         print "Args : ", args
@@ -149,7 +169,8 @@ if __name__ == '__main__':
                 StartTestCluster(args[0])
             else:
                 print "Define number of nodes"
-
         if o in ("--stop-cluster"):
             StopTestCluster()
+        if o in ("--cleanup-containers"):
+            CleanupOrphaned()
 
