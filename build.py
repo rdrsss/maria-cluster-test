@@ -18,6 +18,11 @@ PASSWORD = "pass"
 # Cluster naming
 CLUSTER_PREFIX = "mariadb_cluster_"
 
+# External MYSQL settings
+DEFAULT_DB          = "test_db"
+DEFAULT_USER        = "test_user"
+DEFAULT_USER_PASS   = "testpass"
+
 # Build docker image.
 def BuildImage():
     subprocess.call(["docker", "build", "-t", IMAGE_NAME, "."])
@@ -36,19 +41,33 @@ def GetNodeIp(node_name):
 
 # Start the galera cluster host.
 def StartClusterHost(node_name, bind_port):
-    subprocess.call([
+    ps = subprocess.Popen([
         "docker", 
         "run", 
         "--name="+node_name, 
         "--network=bridge", 
         "-e", 
-        "MYSQL_ROOT_PASSWORD="+PASSWORD, 
+        "MYSQL_ROOT_PASSWORD=" + PASSWORD, 
+        "-e",
+        "MYSQL_DATABASE=" + DEFAULT_DB,
+        "-e"
+        "MYSQL_USER=" + DEFAULT_USER,
+        "-e",
+        "MYSQL_PASSWORD=" + DEFAULT_USER_PASS,
         "-d", 
         "-p", 
         bind_port + ":3306", 
         IMAGE_NAME, 
         "mysqld", 
-        "--wsrep-new-cluster"]) 
+        "--wsrep-new-cluster"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE) 
+
+    out, err = ps.communicate()
+    if(len(str(err)) > 0):
+        print "Error starting cluster host : " + err
+        return False
+    return True
 
 # Start a cluster node, connecting to cluster host.
 def StartClusterNode(node_name, bind_port, ip_address):
@@ -57,14 +76,13 @@ def StartClusterNode(node_name, bind_port, ip_address):
         "run", 
         "--name="+node_name, 
         "--network=bridge", 
-        "-e", 
-        "MYSQL_ROOT_PASSWORD="+PASSWORD, 
         "-d", 
         "-p", 
         bind_port + ":3306", 
         IMAGE_NAME, 
         "mysqld",
         "--wsrep_cluster_address=gcomm://"+ip_address]) 
+    return True
 
 # Parse containers from string buffer.
 def ParseContainerNames(strbuf):
@@ -106,15 +124,16 @@ def CleanupOrphaned():
 def StartTestCluster(num_nodes):
     # Start cluster
     print "Starting cluster host ..."
-    StartClusterHost(CLUSTER_PREFIX + "host", str(DEFAULT_PORT))
-    # Get cluster host ip
-    ip_address = GetNodeIp(CLUSTER_PREFIX + "host")
-    # Get ip of first node
-    port_num = DEFAULT_PORT + 1
-    print "Starting cluster nodes ..."
-    for n in range(0, int(num_nodes)):
-        StartClusterNode(CLUSTER_PREFIX + "node_" + str(n), str(port_num), ip_address)
-        port_num += 1
+    s = StartClusterHost(CLUSTER_PREFIX + "host", str(DEFAULT_PORT))
+    if s:
+        # Get cluster host ip
+        ip_address = GetNodeIp(CLUSTER_PREFIX + "host")
+        # Get ip of first node
+        port_num = DEFAULT_PORT + 1
+        print "Starting cluster nodes ..."
+        for n in range(0, int(num_nodes)):
+            StartClusterNode(CLUSTER_PREFIX + "node_" + str(n), str(port_num), ip_address)
+            port_num += 1
 
 # Stop already running test cluster.
 def StopTestCluster():
@@ -127,16 +146,51 @@ def StopTestCluster():
     else:
         print "No containers to stop."
 
+# Add node to existing cluster
+def AddNode():
+    # Get running containers
+    containers = GetClusterContainerNames()
+    if len(containers) > 0:
+        # Determine number to increment on
+        print containers
+    else:
+        print "No cluster running"
+
+# Remove node from existing cluster
+def RemoveNode():
+    # Get running containers
+    containers = GetClusterContainerNames()
+    if len(containers) > 0:
+        # Determine nubmer to decrement on
+        print containers
+    else:
+        print "No cluster running"
+
+# Remove node from existing cluster
+def RemoveNamedNode():
+    # Get running containers
+    containers = GetClusterContainerNames()
+    if len(containers) > 0:
+        # Determine nubmer to decrement on
+        print containers
+    else:
+        print "No cluster running"
+
+
+
 # Display script usage
 def Usage():
     usage = """\
-        --help                  : print out this usage text.
-        --image                 : image options
-                                  build (build docker image (rmi))
-                                  delete (delete docker image (rmi))
+        --help                  : Print out this usage text.
+        --image                 : Image options.
+                                  [build] (build docker image (rmi)).
+                                  [delete] (delete docker image (rmi)).
         --start-cluster         : Start test cluster, brings up host, and nodes attached.
         --stop-cluster          : Stop running test cluster.
-        --cleanup-containers    : Cleanup orphaned containers (rm)
+        --cleanup-containers    : Cleanup orphaned containers (rm).
+        --add-node              : Add node to existing cluster.
+        --remove-node           : Remove node from existing cluster.
+        --remove-named-node     : Remove a node via it's container name.
     """
     print usage
 
@@ -144,10 +198,10 @@ def Usage():
 if __name__ == '__main__':
     # Get opts
     try:
-        long_args = ["help", "image", "start-cluster", "stop-cluster", "cleanup-containers"]
+        long_args = ["help", "image", "start-cluster", "stop-cluster", "cleanup-containers", "add-node", "remove-node", "remove-named-node"]
         opts, args = getopt.getopt(sys.argv[1:], "be:he:s:c:r:", long_args)
-        print "Opts : ", opts
-        print "Args : ", args
+       # print "Opts : ", opts
+       # print "Args : ", args
     except getopt.GetoptError as err:
         print "opt err: ", str(err)
         Usage()
@@ -161,8 +215,10 @@ if __name__ == '__main__':
             for a in args:
                 if a in ("build"):
                     BuildImage()
-                if a in ("delete"):
+                elif a in ("delete"):
                     DeleteImage()
+                else:
+                    print "Provide arg, [build] or [delete]"
         if o in ("--start-cluster"):
             # Look for number of nodes
             if len(args) > 0:
@@ -173,4 +229,11 @@ if __name__ == '__main__':
             StopTestCluster()
         if o in ("--cleanup-containers"):
             CleanupOrphaned()
+        if o in ("--add-node"):
+            AddNode()
+        if o in ("--remove-node"):
+            RemoveNode()
+        if o in ("--remove-named-node"):
+            RemoveNamedNode()
+
 
