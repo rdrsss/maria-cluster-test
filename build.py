@@ -127,7 +127,7 @@ def CleanupOrphaned():
     if len(names) > 0:
         print "Cleaning up container names ..."
         for c in names:
-            subprocess.call(["docker", "rm"] + c)
+            subprocess.call(["docker", "rm", c])
     else:
         print "No containers found"
 
@@ -201,18 +201,22 @@ def RemoveNode():
             print "Stopping node : " + name
             # remove node
             subprocess.call(["docker", "stop", name])
+            subprocess.call(["docker", "rm", name])
         else:
             print "No available nodes"
     else:
         print "No cluster running"
 
 # Remove node from existing cluster
-def RemoveNamedNode():
+def RemoveNamedNode(name):
     # Get running containers
     containers = GetClusterContainerNames()
     if len(containers) > 0:
         # Determine nubmer to decrement on
         print containers
+        # remove node
+        subprocess.call(["docker", "stop", name])
+        subprocess.call(["docker", "rm", name])
     else:
         print "No cluster running"
 
@@ -227,8 +231,11 @@ def Usage():
         --stop-cluster          : Stop running test cluster.
         --cleanup-containers    : Cleanup orphaned containers (rm).
         --add-node              : Add node to existing cluster.
+                                  Provide number of nodes to add.
         --remove-node           : Remove node from existing cluster.
+                                  Provide number of nodes to remove.
         --remove-named-node     : Remove a node via it's container name.
+                                  Provide container names to remove.
     """
     print usage
 
@@ -238,8 +245,8 @@ if __name__ == '__main__':
     try:
         long_args = ["help", "image", "start-cluster", "stop-cluster", "cleanup-containers", "add-node", "remove-node", "remove-named-node"]
         opts, args = getopt.getopt(sys.argv[1:], "be:he:s:c:r:", long_args)
-       # print "Opts : ", opts
-       # print "Args : ", args
+        print "Opts : ", opts
+        print "Args : ", args
     except getopt.GetoptError as err:
         print "opt err: ", str(err)
         Usage()
@@ -268,10 +275,22 @@ if __name__ == '__main__':
         if o in ("--cleanup-containers"):
             CleanupOrphaned()
         if o in ("--add-node"):
-            AddNode()
+            if len(args) > 0:
+                for num in range(0, int(args[0])):
+                    AddNode()
+            else:
+                print "Provide number of nodes"
         if o in ("--remove-node"):
-            RemoveNode()
+            if len(args) > 0:
+                for num in range(0, int(args[0])):
+                    RemoveNode()
+            else:
+                print "Provide number of nodes"
         if o in ("--remove-named-node"):
-            RemoveNamedNode()
+            if len(args) > 0:
+                for name in args:
+                    RemoveNamedNode(name)
+            else:
+                print "Provide node names"
 
 
