@@ -17,6 +17,8 @@ DEFAULT_PORT = 10666
 PASSWORD = "pass"
 # Cluster naming
 CLUSTER_PREFIX = "mariadb_cluster_"
+CLUSTER_NODE = "node_"
+CLUSTER_HOST = "host"
 
 # External MYSQL settings
 DEFAULT_DB          = "test_db"
@@ -30,6 +32,13 @@ def BuildImage():
 # Delete docker image.
 def DeleteImage():
     subprocess.call(["docker", "rmi", IMAGE_NAME])
+
+def GetNodeExposedPort(node_name):
+    ps = subprocess.Popen(("docker", "inspect", node_name), stdout=subprocess.PIPE)
+    out, err = ps.communicate()
+    ins = json.loads(out)
+    port = ins[0]['NetworkSettings']['Ports']['3306/tcp'][0]['HostPort']
+    return port
 
 # Get node ip from container.
 def GetNodeIp(node_name):
@@ -67,6 +76,8 @@ def StartClusterHost(node_name, bind_port):
     if(len(str(err)) > 0):
         print "Error starting cluster host : " + err
         return False
+    if(len(str(out))>0): 
+        print "\t Container id : " + out
     return True
 
 # Start a cluster node, connecting to cluster host.
@@ -124,15 +135,15 @@ def CleanupOrphaned():
 def StartTestCluster(num_nodes):
     # Start cluster
     print "Starting cluster host ..."
-    s = StartClusterHost(CLUSTER_PREFIX + "host", str(DEFAULT_PORT))
+    s = StartClusterHost(CLUSTER_PREFIX + CLUSTER_HOST, str(DEFAULT_PORT))
     if s:
         # Get cluster host ip
-        ip_address = GetNodeIp(CLUSTER_PREFIX + "host")
+        ip_address = GetNodeIp(CLUSTER_PREFIX + CLUSTER_HOST)
         # Get ip of first node
         port_num = DEFAULT_PORT + 1
         print "Starting cluster nodes ..."
         for n in range(0, int(num_nodes)):
-            StartClusterNode(CLUSTER_PREFIX + "node_" + str(n), str(port_num), ip_address)
+            StartClusterNode(CLUSTER_PREFIX + CLUSTER_NODE + str(n), str(port_num), ip_address)
             port_num += 1
 
 # Stop already running test cluster.
@@ -153,6 +164,23 @@ def AddNode():
     if len(containers) > 0:
         # Determine number to increment on
         print containers
+        highest_num = 0
+        for n in containers:
+            if CLUSTER_PREFIX + CLUSTER_NODE in n:
+                #get number
+                a = n.strip(CLUSTER_PREFIX + CLUSTER_NODE)
+                if a > highest_num:
+                    highest_num = a
+        # Get port from highest container
+        port = GetNodeExposedPort(CLUSTER_PREFIX + CLUSTER_NODE + str(highest_num))
+        print "exposed port : " + port
+        # Get cluster host ip
+        ip_address = GetNodeIp(CLUSTER_PREFIX + CLUSTER_HOST)
+        # Add new node
+        new_node_number = str(int(highest_num)+1)
+        new_node_port = str(int(port)+1)
+        print "adding node : " + new_node_number + " on port : " + new_node_port
+        StartClusterNode(CLUSTER_PREFIX + CLUSTER_NODE + new_node_number, new_node_port, ip_address)
     else:
         print "No cluster running"
 
@@ -175,8 +203,6 @@ def RemoveNamedNode():
         print containers
     else:
         print "No cluster running"
-
-
 
 # Display script usage
 def Usage():
