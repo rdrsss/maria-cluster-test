@@ -163,8 +163,7 @@ def AddNode():
     containers = GetClusterContainerNames()
     if len(containers) > 0:
         # Determine number to increment on
-        print containers
-        highest_num = 0
+        highest_num = -1
         for n in containers:
             if CLUSTER_PREFIX + CLUSTER_NODE in n:
                 #get number
@@ -190,7 +189,20 @@ def RemoveNode():
     containers = GetClusterContainerNames()
     if len(containers) > 0:
         # Determine nubmer to decrement on
-        print containers
+        highest_num = -1 
+        for n in containers:
+            if CLUSTER_PREFIX + CLUSTER_NODE in n:
+                #get number
+                a = n.strip(CLUSTER_PREFIX + CLUSTER_NODE)
+                if a > highest_num:
+                    highest_num = a
+        if highest_num > -1:
+            name = str(CLUSTER_PREFIX + CLUSTER_NODE + str(highest_num))
+            print "Stopping node : " + name
+            # remove node
+            subprocess.call(["docker", "stop", name])
+        else:
+            print "No available nodes"
     else:
         print "No cluster running"
 
