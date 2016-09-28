@@ -27,7 +27,9 @@ DEFAULT_USER_PASS   = "testpass"
 
 # Build docker image.
 def BuildImage():
+    os.chdir("mariadb")
     subprocess.call(["docker", "build", "-t", IMAGE_NAME, "."])
+    os.chdir("..")
 
 # Delete docker image.
 def DeleteImage():
