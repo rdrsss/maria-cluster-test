@@ -33,5 +33,8 @@ EXPOSE 3306
 # Copy config file
 COPY my.cnf /etc/mysql/
 
+# Copy setup file
+COPY setup.sql /
+
 # Run
 CMD ["mysqld"]
