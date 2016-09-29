@@ -16,4 +16,6 @@ Test script to bring up and tear down a galera cluster easily. Provides docker f
                                   Provide number of nodes to remove.
         --remove-named-node     : Remove a node via it's container name.
                                   Provide container names to remove.
+        --start-proxy           : Start HAProxy instance.
+        --stop-proxy            : Stop HAProxy instnace.
 ```
