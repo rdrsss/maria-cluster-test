@@ -61,7 +61,14 @@ def GetNodeIp(node_name):
 
 # Start proxy node.
 def StartProxy():
-    print "start proxy"
+    print "Starting proxy service"
+    # Check if proxy instance exists
+    names = GetClusterContainerNames()
+    for n in names:
+        if n == CLUSTER_PREFIX+HA_PROXY:
+            print "Proxy already running"
+            return
+
     subprocess.call([
         "docker", 
         "run", 
@@ -77,7 +84,9 @@ def StartProxy():
 
 # Stop proxy node.
 def StopProxy():
-    print "stop proxy"
+    print "Stopping proxy service"
+    subprocess.call(["docker", "stop", CLUSTER_PREFIX + HA_PROXY])
+    subprocess.call(["docker", "rm", CLUSTER_PREFIX + HA_PROXY])
 
 # Start the galera cluster host.
 def StartClusterHost(node_name, bind_port):
@@ -344,8 +353,8 @@ if __name__ == '__main__':
             else:
                 print "Provide node names"
         if o in ("--start-proxy"):
-            print "start proxy"
+            StartProxy()
         if o in ("--stop-proxy"):
-            print "stop proxy"
+            StopProxy()
 
 
