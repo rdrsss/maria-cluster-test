@@ -62,12 +62,15 @@ def GetNodeIp(node_name):
 # Start proxy node.
 def StartProxy():
     print "Starting proxy service"
-    # Check if proxy instance exists
     names = GetClusterContainerNames()
-    for n in names:
-        if n == CLUSTER_PREFIX+HA_PROXY:
-            print "Proxy already running"
-            return
+    # Make sure cluster is running
+    if not any(CLUSTER_PREFIX+CLUSTER_HOST in n for n in names):
+        print "No cluster running, no cluster host found"
+        return
+    # Check if proxy instance exists
+    if any(CLUSTER_PREFIX+HA_PROXY in n for n in names):
+        print "Proxy already running"
+        return
 
     subprocess.call([
         "docker", 
