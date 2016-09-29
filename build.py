@@ -9,6 +9,7 @@ import os, getopt, sys, subprocess, json, time
 
 # Docker image name via dockerfile
 IMAGE_NAME = "test_mariadb"
+PROXY_IMAGE_NAME = "test_haproxy"
 # Official docker image name as per dockerhub
 OFFICIAL_IMAGE_NAME = "mariadb:latest"
 # Default port to map container to
@@ -19,6 +20,7 @@ PASSWORD = "pass"
 CLUSTER_PREFIX = "mariadb_cluster_"
 CLUSTER_NODE = "node_"
 CLUSTER_HOST = "host"
+HA_PROXY = "ha_proxy"
 
 # External MYSQL settings
 DEFAULT_DB          = "test_db"
@@ -27,9 +29,16 @@ DEFAULT_USER_PASS   = "testpass"
 
 # Build docker image.
 def BuildImage():
+    # Build mariadb image
+    print "Building mariadb image ..."
     os.chdir("mariadb")
     subprocess.call(["docker", "build", "-t", IMAGE_NAME, "."])
     os.chdir("..")
+    print "Building haproxy image ..."
+    os.chdir("haproxy")
+    subprocess.call(["docker", "build", "-t", PROXY_IMAGE_NAME, "."])
+    os.chdir("..")
+    print "done."
 
 # Delete docker image.
 def DeleteImage():
@@ -49,6 +58,26 @@ def GetNodeIp(node_name):
     ins = json.loads(out)
     ip_address = ins[0]['NetworkSettings']['IPAddress']
     return ip_address
+
+# Start proxy node.
+def StartProxy():
+    print "start proxy"
+    subprocess.call([
+        "docker", 
+        "run", 
+        "--name="+CLUSTER_PREFIX+HA_PROXY, 
+        "--network=bridge", 
+        "-d", 
+        #"-p", 
+        #bind_port + ":3306", 
+        IMAGE_NAME, 
+        "mysqld",
+        "--wsrep_cluster_address=gcomm://"+ip_address]) 
+
+
+# Stop proxy node.
+def StopProxy():
+    print "stop proxy"
 
 # Start the galera cluster host.
 def StartClusterHost(node_name, bind_port):
@@ -246,6 +275,8 @@ def Usage():
                                   Provide number of nodes to remove.
         --remove-named-node     : Remove a node via it's container name.
                                   Provide container names to remove.
+        --start-proxy           : Start HAProxy instance.
+        --stop-proxy            : Stop HAProxy instnace.
     """
     print usage
 
@@ -253,7 +284,17 @@ def Usage():
 if __name__ == '__main__':
     # Get opts
     try:
-        long_args = ["help", "image", "start-cluster", "stop-cluster", "cleanup-containers", "add-node", "remove-node", "remove-named-node"]
+        long_args = [
+                "help", 
+                "image", 
+                "start-cluster", 
+                "stop-cluster", 
+                "cleanup-containers", 
+                "add-node", 
+                "remove-node", 
+                "remove-named-node",
+                "start-proxy",
+                "stop-proxy"]
         opts, args = getopt.getopt(sys.argv[1:], "be:he:s:c:r:", long_args)
         print "Opts : ", opts
         print "Args : ", args
@@ -302,5 +343,9 @@ if __name__ == '__main__':
                     RemoveNamedNode(name)
             else:
                 print "Provide node names"
+        if o in ("--start-proxy"):
+            print "start proxy"
+        if o in ("--stop-proxy"):
+            print "stop proxy"
 
 
