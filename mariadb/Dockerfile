@@ -35,6 +35,7 @@ COPY my.cnf /etc/mysql/
 
 # Copy setup file
 COPY setup.sql /
+COPY setup.sh /
 
 # Run
 CMD ["mysqld"]

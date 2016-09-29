@@ -5,7 +5,7 @@
 # @breif    : Simple build script to quickly bring up and tear down
 #             a mariadb galera cluster, and possibly other configurations.
 #
-import os, getopt, sys, subprocess, json
+import os, getopt, sys, subprocess, json, time
 
 # Docker image name via dockerfile
 IMAGE_NAME = "test_mariadb"
@@ -80,6 +80,14 @@ def StartClusterHost(node_name, bind_port):
         return False
     if(len(str(out))>0): 
         print "\t Container id : " + out
+        time.sleep(1)
+        # Setup cluster
+        subprocess.call([
+            "docker",
+            "exec",
+            node_name,
+            "bash",
+            "setup.sh"])
     return True
 
 # Start a cluster node, connecting to cluster host.
