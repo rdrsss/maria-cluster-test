@@ -9,7 +9,7 @@ import os, getopt, sys, subprocess, json, time
 
 # Docker image name via dockerfile
 IMAGE_NAME = "test_mariadb"
-PROXY_IMAGE_NAME = "test_haproxy"
+PROXY_IMAGE_NAME = "test_maxscale"
 # Official docker image name as per dockerhub
 OFFICIAL_IMAGE_NAME = "mariadb:latest"
 # Default port to map container to
@@ -20,7 +20,7 @@ PASSWORD = "pass"
 CLUSTER_PREFIX = "mariadb_cluster_"
 CLUSTER_NODE = "node_"
 CLUSTER_HOST = "host"
-HA_PROXY = "ha_proxy"
+PROXY = "max_scale"
 
 # External MYSQL settings
 DEFAULT_DB          = "test_db"
@@ -34,8 +34,8 @@ def BuildImage():
     os.chdir("mariadb")
     subprocess.call(["docker", "build", "-t", IMAGE_NAME, "."])
     os.chdir("..")
-    print "Building haproxy image ..."
-    os.chdir("haproxy")
+    print "Building maxscale image ..."
+    os.chdir("maxscale")
     subprocess.call(["docker", "build", "-t", PROXY_IMAGE_NAME, "."])
     os.chdir("..")
     print "done."
@@ -68,25 +68,27 @@ def StartProxy():
         print "No cluster running, no cluster host found"
         return
     # Check if proxy instance exists
-    if any(CLUSTER_PREFIX+HA_PROXY in n for n in names):
+    if any(CLUSTER_PREFIX+PROXY in n for n in names):
         print "Proxy already running"
         return
 
     subprocess.call([
         "docker", 
         "run", 
-        "--name="+CLUSTER_PREFIX+HA_PROXY, 
+        "--name="+CLUSTER_PREFIX+PROXY, 
         "--network=bridge", 
         "-d", 
         "-p", 
-        "10999" + ":3306", 
+        "10101" + ":10101", 
+        "-p", 
+        "9099" + ":9099", 
         PROXY_IMAGE_NAME])
 
 # Stop proxy node.
 def StopProxy():
     print "Stopping proxy service"
-    subprocess.call(["docker", "stop", CLUSTER_PREFIX + HA_PROXY])
-    subprocess.call(["docker", "rm", CLUSTER_PREFIX + HA_PROXY])
+    subprocess.call(["docker", "stop", CLUSTER_PREFIX + PROXY])
+    subprocess.call(["docker", "rm", CLUSTER_PREFIX + PROXY])
 
 # Start the galera cluster host.
 def StartClusterHost(node_name, bind_port):

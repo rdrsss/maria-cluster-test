@@ -13,4 +13,19 @@ RUN \
 	dpkg -i maxscale-beta-2.0.0-1.ubuntu.trusty.x86_64.deb && \
 	apt-get install -f
 
+COPY maxscale.cnf /etc/
+
+# RW Split Listener
+EXPOSE 4006
+
+# Read Connection Listener
+EXPOSE 4008
+
+# Debug Listener
+EXPOSE 4442
+
+# CLI Listener
+EXPOSE 6603
+
+ENTRYPOINT ["/usr/bin/maxscale", "-d"]
 
