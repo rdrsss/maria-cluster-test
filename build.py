@@ -78,12 +78,9 @@ def StartProxy():
         "--name="+CLUSTER_PREFIX+HA_PROXY, 
         "--network=bridge", 
         "-d", 
-        #"-p", 
-        #bind_port + ":3306", 
-        IMAGE_NAME, 
-        "mysqld",
-        "--wsrep_cluster_address=gcomm://"+ip_address]) 
-
+        "-p", 
+        "10999" + ":3306", 
+        PROXY_IMAGE_NAME])
 
 # Stop proxy node.
 def StopProxy():
