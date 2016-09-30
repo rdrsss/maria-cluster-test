@@ -1,7 +1,7 @@
-# maria-dockerfile
-Test script to bring up and tear down a galera cluster easily. Provides docker file for latest mariadb version.
+# Maria cluster test env.
+This is project is just used as a testbed for me to test and familiarize myself with mariadb conifguration, and scaling it with MaxScale. Test script to bring up and tear down a galera cluster easily. Provides docker file for latest mariadb version. Added the maxscale proxy layer to test that out as well.
 
-## usage
+## Usage
 ```
         --help                  : Print out this usage text.
         --image                 : Image options.
@@ -16,6 +16,9 @@ Test script to bring up and tear down a galera cluster easily. Provides docker f
                                   Provide number of nodes to remove.
         --remove-named-node     : Remove a node via it's container name.
                                   Provide container names to remove.
-        --start-proxy           : Start HAProxy instance.
-        --stop-proxy            : Stop HAProxy instnace.
+        --start-proxy           : Start MaxScale instance.
+        --stop-proxy            : Stop MaxScale instnace.
 ```
+
+## Useful links
+* https://mariadb.com/blog/close-encounter-maxscale
