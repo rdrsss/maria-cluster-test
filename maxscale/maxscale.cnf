@@ -1,6 +1,16 @@
 [maxscale]
 threads=2
 
+[MaxAdmin]
+type=service
+router=cli
+
+[MaxAdmin Unix Listener]
+type=listener
+service=MaxAdmin
+protocol=maxscaled
+socket=default
+
 [Replication Monitor]
 type=monitor
 module=mysqlmon
@@ -21,25 +31,35 @@ service=Splitter Service
 protocol=MySQLClient
 port=4006
 
-[CLI]
+[Debug Interface]
 type=service
-router=cli
+router=debugcli
 
-[CLI Listener]
+[Debug Listener]
 type=listener
-service=CLI
-protocol=maxscaled
-socket=default
+service=Debug Interface
+protocol=telnetd
+port=4442
+
+#[CLI]
+#type=service
+#router=cli
+
+#[CLI Listener]
+#type=listener
+#service=CLI
+#protocol=maxscaled
+#socket=default
 
 [ClusterHost]
 type=server
-address=0.0.0.0
-port=10666
+address=172.17.0.2
+port=3306
 protocol=MySQLBackend
 
 [ClusterNode0]
 type=server
-address=0.0.0.0
-port=10667
+address=172.17.0.3
+port=3306
 protocol=MySQLBackend
 

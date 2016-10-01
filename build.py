@@ -79,9 +79,9 @@ def StartProxy():
         "--network=bridge", 
         "-d", 
         "-p", 
-        "10101" + ":10101", 
+        "10101" + ":4006", 
         "-p", 
-        "9099" + ":9099", 
+        "9099" + ":4008", 
         PROXY_IMAGE_NAME])
 
 # Stop proxy node.

@@ -27,5 +27,5 @@ EXPOSE 4442
 # CLI Listener
 EXPOSE 6603
 
-ENTRYPOINT ["/usr/bin/maxscale", "-d"]
+CMD ["/usr/bin/maxscale", "-d"]
 
