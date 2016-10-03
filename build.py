@@ -22,6 +22,9 @@ CLUSTER_NODE = "node_"
 CLUSTER_HOST = "host"
 PROXY = "max_scale"
 
+# MaxScale
+MAXSCALE_CFG = "maxscale/maxscale.cnf"
+
 # External MYSQL settings
 DEFAULT_DB          = "test_db"
 DEFAULT_USER        = "test_user"
@@ -176,7 +179,7 @@ def GetClusterContainerIps():
     container_ips = []
     for n in names:
         if n != CLUSTER_PREFIX + PROXY:
-             container.ips.append(GetNodeIp(n))
+             container_ips.append(GetNodeIp(n))
     return container_ips
     
 # Cleanup possible orphaned contianers
@@ -282,24 +285,81 @@ def RemoveNamedNode(name):
 
 def GenerateMaxScaleConfig():
     # Get ip's for all nodes in cluster
+    ips = GetClusterContainerIps()
+    if len(ips) <= 0 :
+        print "Could not resolve cluster node ips"
+        return
+    # Generate server names
+    server_names = []
+    count = 0
+    for i in ips:
+        server_names.append("cluster_node_" + str(count))
+        count += 1
+
+    # Create comma delimited string for use in cfg
+    servers  = ",".join(server_names)
+    print servers
+
     # setup variable number of nodes in cnf
     config = ConfigParser.ConfigParser()
-    #MaxScale
+    # Setup MaxScale
     config.add_section('maxscale')
     config.set('maxscale', 'threads', '2')
-    #MaxAdmin
+    # MaxAdmin
     config.add_section('MaxAdmin')
     config.set('MaxAdmin', 'type', 'service')
     config.set('MaxAdmin', 'router', 'cli')
-    #Replication Monitor
+    # Galera Monitor
+    config.add_section('Galera Monitor')
+    config.set('Galera Monitor', 'type', 'monitor')
+    config.set('Galera Monitor', 'module', 'galeramon')
+    config.set('Galera Monitor', 'disable_master_failback', '1')
+    config.set('Galera Monitor', 'servers', servers)
+    config.set('Galera Monitor', 'user', 'maxscale')
+    config.set('Galera Monitor', 'passwd', 'password')
+    # Replication Montior
     config.add_section('Replication Monitor')
     config.set('Replication Monitor', 'type', 'monitor')
     config.set('Replication Monitor', 'module', 'mysqlmon')
-    config.set('Replication Monitor', 'servers' 'ClusterHost, ClusterNode0') # TODO generate servers first unpack list here.
+    config.set('Replication Monitor', 'servers', servers) 
     config.set('Replication Monitor', 'user', 'maxscale')
     config.set('Replication Monitor', 'passwd', 'password')
+    # Splitter Service
+    config.add_section('Splitter Service')
+    config.set('Splitter Service', 'type', 'service')
+    config.set('Splitter Service', 'router', 'readwritesplit')
+    config.set('Splitter Service', 'servers', servers)
+    config.set('Splitter Service', 'user', 'maxscale')
+    config.set('Splitter Service', 'passwd', 'password')
+    # Splitter Listener
+    config.add_section('Splitter Listener')
+    config.set('Splitter Listener', 'type', 'listener')
+    config.set('Splitter Listener', 'service', 'Splitter Service')
+    config.set('Splitter Listener', 'protocol', 'MySQLClient')
+    config.set('Splitter Listener', 'port', '4006')
+    # Debug Interface
+    config.add_section('Debug Interface')
+    config.set('Debug Interface', 'type', 'service')
+    config.set('Debug Interface', 'router', 'debugcli')
+    # Debug Listener
+    config.add_section('Debug Listener')
+    config.set('Debug Listener', 'type', 'listener')
+    config.set('Debug Listener', 'service', 'Debug Interface')
+    config.set('Debug Listener', 'protocol', 'telnetd')
+    config.set('Debug Listener', 'port', '4442')
+    # Setup servers
+    count = 0
+    for s in server_names:
+        print s
+        config.add_section(s)
+        config.set(s, 'type', 'server')
+        config.set(s, 'address', ips[count])
+        config.set(s, 'port', '3306')
+        config.set(s, 'protocol', 'MySQLBackend')
+        count += 1
 
-
+    with open('test.cfg', 'wb') as configfile:
+        config.write(MAXSCALE_CFG)
 
     return
 
@@ -394,7 +454,6 @@ if __name__ == '__main__':
         if o in ("--stop-proxy"):
             StopProxy()
         if o in ("--generate-proxy-cfg"):
-            GetClusterContainerIps()
-            #GenerateMaxScaleConfig()
+            GenerateMaxScaleConfig()
 
 
