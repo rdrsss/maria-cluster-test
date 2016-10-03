@@ -74,7 +74,15 @@ def StartProxy():
     if any(CLUSTER_PREFIX+PROXY in n for n in names):
         print "Proxy already running"
         return
-
+    # Generate Config
+    GenerateMaxScaleConfig()
+    # Build Image
+    print "Building maxscale image ..."
+    os.chdir("maxscale")
+    subprocess.call(["docker", "build", "-t", PROXY_IMAGE_NAME, "."])
+    os.chdir("..")
+    print "done."
+    # Start Proxy
     subprocess.call([
         "docker", 
         "run", 
@@ -309,6 +317,12 @@ def GenerateMaxScaleConfig():
     config.add_section('MaxAdmin')
     config.set('MaxAdmin', 'type', 'service')
     config.set('MaxAdmin', 'router', 'cli')
+    # MaxAdmin Listener
+    config.add_section('MaxAdmin Unix Listener')
+    config.set('MaxAdmin Unix Listener', 'type', 'listener')
+    config.set('MaxAdmin Unix Listener', 'service', 'MaxAdmin')
+    config.set('MaxAdmin Unix Listener', 'protocol', 'maxscaled')
+    config.set('MaxAdmin Unix Listener', 'socket', 'default')
     # Galera Monitor
     config.add_section('Galera Monitor')
     config.set('Galera Monitor', 'type', 'monitor')
@@ -358,8 +372,8 @@ def GenerateMaxScaleConfig():
         config.set(s, 'protocol', 'MySQLBackend')
         count += 1
 
-    with open('test.cfg', 'wb') as configfile:
-        config.write(MAXSCALE_CFG)
+    with open(MAXSCALE_CFG, 'wb') as configfile:
+        config.write(configfile)
 
     return
 
