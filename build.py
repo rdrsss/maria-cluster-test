@@ -31,12 +31,15 @@ DEFAULT_USER        = "test_user"
 DEFAULT_USER_PASS   = "testpass"
 
 # Build docker image.
-def BuildImage():
+def BuildMariaImage():
     # Build mariadb image
     print "Building mariadb image ..."
     os.chdir("mariadb")
     subprocess.call(["docker", "build", "-t", IMAGE_NAME, "."])
     os.chdir("..")
+    print "done."
+
+def BuildMaxScaleImage():
     print "Building maxscale image ..."
     os.chdir("maxscale")
     subprocess.call(["docker", "build", "-t", PROXY_IMAGE_NAME, "."])
@@ -77,11 +80,7 @@ def StartProxy():
     # Generate Config
     GenerateMaxScaleConfig()
     # Build Image
-    print "Building maxscale image ..."
-    os.chdir("maxscale")
-    subprocess.call(["docker", "build", "-t", PROXY_IMAGE_NAME, "."])
-    os.chdir("..")
-    print "done."
+    BuildMaxScaleImage()
     # Start Proxy
     subprocess.call([
         "docker", 
@@ -204,6 +203,8 @@ def CleanupOrphaned():
 
 # Start test cluster, bring up host and nodes to connect.
 def StartTestCluster(num_nodes):
+    # Build Image
+    BuildMariaImage()
     # Start cluster
     print "Starting cluster host ..."
     s = StartClusterHost(CLUSTER_PREFIX + CLUSTER_HOST, str(DEFAULT_PORT))
@@ -430,7 +431,8 @@ if __name__ == '__main__':
         if o in ("--image"):
             for a in args:
                 if a in ("build"):
-                    BuildImage()
+                    BuildMariaImage()
+                    BuildMaxScaleImage()
                 elif a in ("delete"):
                     DeleteImage()
                 else:
