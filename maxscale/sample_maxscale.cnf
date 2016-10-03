@@ -1,0 +1,75 @@
+[maxscale]
+threads = 2
+
+[MaxAdmin]
+type = service
+router = cli
+
+[MaxAdmin Unix Listener]
+type = listener
+service = MaxAdmin
+protocol = maxscaled
+socket = default
+
+[Galera Monitor]
+type = monitor
+module = galeramon
+disable_master_failback = 1
+servers = cluster_node_0,cluster_node_1,cluster_node_2,cluster_node_3
+user = maxscale
+passwd = password
+
+[Replication Monitor]
+type = monitor
+module = mysqlmon
+servers = cluster_node_0,cluster_node_1,cluster_node_2,cluster_node_3
+user = maxscale
+passwd = password
+
+[Splitter Service]
+type = service
+router = readwritesplit
+servers = cluster_node_0,cluster_node_1,cluster_node_2,cluster_node_3
+user = maxscale
+passwd = password
+
+[Splitter Listener]
+type = listener
+service = Splitter Service
+protocol = MySQLClient
+port = 4006
+
+[Debug Interface]
+type = service
+router = debugcli
+
+[Debug Listener]
+type = listener
+service = Debug Interface
+protocol = telnetd
+port = 4442
+
+[cluster_node_0]
+type = server
+address = 172.17.0.6
+port = 3306
+protocol = MySQLBackend
+
+[cluster_node_1]
+type = server
+address = 172.17.0.5
+port = 3306
+protocol = MySQLBackend
+
+[cluster_node_2]
+type = server
+address = 172.17.0.3
+port = 3306
+protocol = MySQLBackend
+
+[cluster_node_3]
+type = server
+address = 172.17.0.2
+port = 3306
+protocol = MySQLBackend
+
