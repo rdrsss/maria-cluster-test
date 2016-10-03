@@ -63,3 +63,10 @@ address=172.17.0.3
 port=3306
 protocol=MySQLBackend
 
+[Galera Monitor]
+type=monitor
+module=galeramon
+disable_master_failback=1
+servers=ClusterHost, ClusterNode0
+user=maxscale
+passwd=password
