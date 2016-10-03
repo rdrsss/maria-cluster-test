@@ -5,7 +5,7 @@
 # @breif    : Simple build script to quickly bring up and tear down
 #             a mariadb galera cluster, and possibly other configurations.
 #
-import os, getopt, sys, subprocess, json, time
+import os, getopt, sys, subprocess, json, time, ConfigParser
 
 # Docker image name via dockerfile
 IMAGE_NAME = "test_mariadb"
@@ -168,6 +168,16 @@ def GetClusterContainerNames():
     ps = subprocess.Popen(("docker", "ps"), stdout=subprocess.PIPE)
     out, err = ps.communicate()
     return ParseContainerNames(out)
+
+# Get all container ip's
+def GetClusterContainerIps():
+    # Get container names
+    names = GetClusterContainerNames()
+    container_ips = []
+    for n in names:
+        if n != CLUSTER_PREFIX + PROXY:
+             container.ips.append(GetNodeIp(n))
+    return container_ips
     
 # Cleanup possible orphaned contianers
 def CleanupOrphaned():
@@ -270,6 +280,29 @@ def RemoveNamedNode(name):
     else:
         print "No cluster running"
 
+def GenerateMaxScaleConfig():
+    # Get ip's for all nodes in cluster
+    # setup variable number of nodes in cnf
+    config = ConfigParser.ConfigParser()
+    #MaxScale
+    config.add_section('maxscale')
+    config.set('maxscale', 'threads', '2')
+    #MaxAdmin
+    config.add_section('MaxAdmin')
+    config.set('MaxAdmin', 'type', 'service')
+    config.set('MaxAdmin', 'router', 'cli')
+    #Replication Monitor
+    config.add_section('Replication Monitor')
+    config.set('Replication Monitor', 'type', 'monitor')
+    config.set('Replication Monitor', 'module', 'mysqlmon')
+    config.set('Replication Monitor', 'servers' 'ClusterHost, ClusterNode0') # TODO generate servers first unpack list here.
+    config.set('Replication Monitor', 'user', 'maxscale')
+    config.set('Replication Monitor', 'passwd', 'password')
+
+
+
+    return
+
 # Display script usage
 def Usage():
     usage = """\
@@ -286,8 +319,9 @@ def Usage():
                                   Provide number of nodes to remove.
         --remove-named-node     : Remove a node via it's container name.
                                   Provide container names to remove.
-        --start-proxy           : Start HAProxy instance.
-        --stop-proxy            : Stop HAProxy instnace.
+        --start-proxy           : Start MaxScale instance.
+        --stop-proxy            : Stop MaxScale instnace.
+        --generate-proxy-cfg    : Generate MaxScale config. Run after bringing up a cluster.
     """
     print usage
 
@@ -305,7 +339,8 @@ if __name__ == '__main__':
                 "remove-node", 
                 "remove-named-node",
                 "start-proxy",
-                "stop-proxy"]
+                "stop-proxy",
+                "generate-proxy-cfg"]
         opts, args = getopt.getopt(sys.argv[1:], "be:he:s:c:r:", long_args)
         print "Opts : ", opts
         print "Args : ", args
@@ -358,5 +393,8 @@ if __name__ == '__main__':
             StartProxy()
         if o in ("--stop-proxy"):
             StopProxy()
+        if o in ("--generate-proxy-cfg"):
+            GetClusterContainerIps()
+            #GenerateMaxScaleConfig()
 
 
