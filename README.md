@@ -21,5 +21,7 @@ This is project is just used as a testbed for me to test and familiarize myself 
 ```
 
 ## Useful links
+### MaxScale
 * https://github.com/mariadb-corporation/MaxScale
 * https://mariadb.com/blog/close-encounter-maxscale
+* https://mariadb.com/kb/en/mariadb-maxscale-14/maxscale-configuration-usage-scenarios/
