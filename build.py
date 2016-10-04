@@ -31,7 +31,7 @@ DEFAULT_USER        = "test_user"
 DEFAULT_USER_PASS   = "testpass"
 
 # Build docker image.
-def BuildMariaImage():
+def build_maria_image():
     # Build mariadb image
     print "Building mariadb image ..."
     os.chdir("mariadb")
@@ -39,7 +39,7 @@ def BuildMariaImage():
     os.chdir("..")
     print "done."
 
-def BuildMaxScaleImage():
+def build_maxscale_image():
     print "Building maxscale image ..."
     os.chdir("maxscale")
     subprocess.call(["docker", "build", "-t", PROXY_IMAGE_NAME, "."])
@@ -47,10 +47,10 @@ def BuildMaxScaleImage():
     print "done."
 
 # Delete docker image.
-def DeleteImage():
+def delete_image():
     subprocess.call(["docker", "rmi", IMAGE_NAME])
 
-def GetNodeExposedPort(node_name):
+def get_node_exposed_port(node_name):
     ps = subprocess.Popen(("docker", "inspect", node_name), stdout=subprocess.PIPE)
     out, err = ps.communicate()
     ins = json.loads(out)
@@ -58,7 +58,7 @@ def GetNodeExposedPort(node_name):
     return port
 
 # Get node ip from container.
-def GetNodeIp(node_name):
+def get_node_ip(node_name):
     ps = subprocess.Popen(("docker", "inspect", node_name), stdout=subprocess.PIPE)
     out, err = ps.communicate()
     ins = json.loads(out)
@@ -66,7 +66,7 @@ def GetNodeIp(node_name):
     return ip_address
 
 # Start proxy node.
-def StartProxy():
+def start_proxy():
     print "Starting proxy service"
     names = GetClusterContainerNames()
     # Make sure cluster is running
@@ -78,9 +78,9 @@ def StartProxy():
         print "Proxy already running"
         return
     # Generate Config
-    GenerateMaxScaleConfig()
+    generate_maxscale_config()
     # Build Image
-    BuildMaxScaleImage()
+    build_maxscale_image()
     # Start Proxy
     subprocess.call([
         "docker", 
@@ -95,7 +95,7 @@ def StartProxy():
         PROXY_IMAGE_NAME])
 
 # Stop proxy node.
-def StopProxy():
+def stop_proxy():
     print "Stopping proxy service"
     subprocess.call(["docker", "stop", CLUSTER_PREFIX + PROXY])
     subprocess.call(["docker", "rm", CLUSTER_PREFIX + PROXY])
@@ -186,11 +186,11 @@ def GetClusterContainerIps():
     container_ips = []
     for n in names:
         if n != CLUSTER_PREFIX + PROXY:
-             container_ips.append(GetNodeIp(n))
+             container_ips.append(get_node_ip(n))
     return container_ips
     
 # Cleanup possible orphaned contianers
-def CleanupOrphaned():
+def cleanup_orphaned():
     ps = subprocess.Popen(("docker", "ps", "-a"), stdout=subprocess.PIPE)
     out, err = ps.communicate()
     names = ParseContainerNames(out)
@@ -202,15 +202,15 @@ def CleanupOrphaned():
         print "No containers found"
 
 # Start test cluster, bring up host and nodes to connect.
-def StartTestCluster(num_nodes):
+def start_test_cluster(num_nodes):
     # Build Image
-    BuildMariaImage()
+    build_maria_image()
     # Start cluster
     print "Starting cluster host ..."
     s = StartClusterHost(CLUSTER_PREFIX + CLUSTER_HOST, str(DEFAULT_PORT))
     if s:
         # Get cluster host ip
-        ip_address = GetNodeIp(CLUSTER_PREFIX + CLUSTER_HOST)
+        ip_address = get_node_ip(CLUSTER_PREFIX + CLUSTER_HOST)
         # Get ip of first node
         port_num = DEFAULT_PORT + 1
         print "Starting cluster nodes ..."
@@ -219,7 +219,7 @@ def StartTestCluster(num_nodes):
             port_num += 1
 
 # Stop already running test cluster.
-def StopTestCluster():
+def stop_test_cluster():
     container_names = GetClusterContainerNames()
     if len(container_names) > 0:
         print "Stopping containers ..."
@@ -230,7 +230,7 @@ def StopTestCluster():
         print "No containers to stop."
 
 # Add node to existing cluster
-def AddNode():
+def add_node():
     # Get running containers
     containers = GetClusterContainerNames()
     if len(containers) > 0:
@@ -243,10 +243,10 @@ def AddNode():
                 if a > highest_num:
                     highest_num = a
         # Get port from highest container
-        port = GetNodeExposedPort(CLUSTER_PREFIX + CLUSTER_NODE + str(highest_num))
+        port = get_node_exposed_port(CLUSTER_PREFIX + CLUSTER_NODE + str(highest_num))
         print "exposed port : " + port
         # Get cluster host ip
-        ip_address = GetNodeIp(CLUSTER_PREFIX + CLUSTER_HOST)
+        ip_address = get_node_ip(CLUSTER_PREFIX + CLUSTER_HOST)
         # Add new node
         new_node_number = str(int(highest_num)+1)
         new_node_port = str(int(port)+1)
@@ -256,7 +256,7 @@ def AddNode():
         print "No cluster running"
 
 # Remove node from existing cluster
-def RemoveNode():
+def remove_node():
     # Get running containers
     containers = GetClusterContainerNames()
     if len(containers) > 0:
@@ -280,7 +280,7 @@ def RemoveNode():
         print "No cluster running"
 
 # Remove node from existing cluster
-def RemoveNamedNode(name):
+def remove_named_node(name):
     # Get running containers
     containers = GetClusterContainerNames()
     if len(containers) > 0:
@@ -292,7 +292,7 @@ def RemoveNamedNode(name):
     else:
         print "No cluster running"
 
-def GenerateMaxScaleConfig():
+def generate_maxscale_config():
     # Get ip's for all nodes in cluster
     ips = GetClusterContainerIps()
     if len(ips) <= 0 :
@@ -328,38 +328,38 @@ def GenerateMaxScaleConfig():
     config.add_section('Galera Monitor')
     config.set('Galera Monitor', 'type', 'monitor')
     config.set('Galera Monitor', 'module', 'galeramon')
-    config.set('Galera Monitor', 'disable_master_failback', '1')
+    #config.set('Galera Monitor', 'disable_master_failback', '1')
     config.set('Galera Monitor', 'servers', servers)
     config.set('Galera Monitor', 'user', 'maxscale')
     config.set('Galera Monitor', 'passwd', 'password')
     # Replication Montior
-    config.add_section('Replication Monitor')
-    config.set('Replication Monitor', 'type', 'monitor')
-    config.set('Replication Monitor', 'module', 'mysqlmon')
-    config.set('Replication Monitor', 'servers', servers) 
-    config.set('Replication Monitor', 'user', 'maxscale')
-    config.set('Replication Monitor', 'passwd', 'password')
-    ## Splitter Service
-    #config.add_section('Splitter Service')
-    #config.set('Splitter Service', 'type', 'service')
-    #config.set('Splitter Service', 'router', 'readwritesplit')
-    #config.set('Splitter Service', 'servers', servers)
-    #config.set('Splitter Service', 'user', 'maxscale')
-    #config.set('Splitter Service', 'passwd', 'password')
-    ## Splitter Listener
-    #config.add_section('Splitter Listener')
-    #config.set('Splitter Listener', 'type', 'listener')
-    #config.set('Splitter Listener', 'service', 'Splitter Service')
-    #config.set('Splitter Listener', 'protocol', 'MySQLClient')
-    #config.set('Splitter Listener', 'port', '4006')
+    #config.add_section('Replication Monitor')
+    #config.set('Replication Monitor', 'type', 'monitor')
+    #config.set('Replication Monitor', 'module', 'mysqlmon')
+    #config.set('Replication Monitor', 'servers', servers) 
+    #config.set('Replication Monitor', 'user', 'maxscale')
+    #config.set('Replication Monitor', 'passwd', 'password')
+    # Splitter Service
+    config.add_section('Splitter Service')
+    config.set('Splitter Service', 'type', 'service')
+    config.set('Splitter Service', 'router', 'readwritesplit')
+    config.set('Splitter Service', 'servers', servers)
+    config.set('Splitter Service', 'user', 'maxscale')
+    config.set('Splitter Service', 'passwd', 'password')
+    # Splitter Listener
+    config.add_section('Splitter Listener')
+    config.set('Splitter Listener', 'type', 'listener')
+    config.set('Splitter Listener', 'service', 'Splitter Service')
+    config.set('Splitter Listener', 'protocol', 'MySQLClient')
+    config.set('Splitter Listener', 'port', '4006')
     # Multi Master Monitor
-    config.add_section('Multi-Master Monitor')
-    config.set('Multi-Master Monitor', 'type', 'monitor')
-    config.set('Multi-Master Monitor', 'module', 'mmmon')
-    config.set('Multi-Master Monitor', 'servers', servers)
-    config.set('Multi-Master Monitor', 'user', 'maxscale')
-    config.set('Multi-Master Monitor', 'passwd', 'password')
-    config.set('Multi-Master Monitor', 'detect_stale_master', 'true')
+    #config.add_section('Multi-Master Monitor')
+    #config.set('Multi-Master Monitor', 'type', 'monitor')
+    #config.set('Multi-Master Monitor', 'module', 'mmmon')
+    #config.set('Multi-Master Monitor', 'servers', servers)
+    #config.set('Multi-Master Monitor', 'user', 'maxscale')
+    #config.set('Multi-Master Monitor', 'passwd', 'password')
+    #config.set('Multi-Master Monitor', 'detect_stale_master', 'true')
     # Debug Interface
     config.add_section('Debug Interface')
     config.set('Debug Interface', 'type', 'service')
@@ -387,7 +387,7 @@ def GenerateMaxScaleConfig():
     return
 
 # Display script usage
-def Usage():
+def usage():
     usage = """\
         --help                  : Print out this usage text.
         --image                 : Image options.
@@ -429,55 +429,55 @@ if __name__ == '__main__':
         print "Args : ", args
     except getopt.GetoptError as err:
         print "opt err: ", str(err)
-        Usage()
+        usage()
         sys.exit(2)
 
     # Check options
     for o, a in opts:
         if o in ("--help"):
-            Usage()
+            usage()
         if o in ("--image"):
             for a in args:
                 if a in ("build"):
-                    BuildMariaImage()
-                    BuildMaxScaleImage()
+                    build_maria_image()
+                    build_maxscale_image()
                 elif a in ("delete"):
-                    DeleteImage()
+                    delete_image()
                 else:
                     print "Provide arg, [build] or [delete]"
         if o in ("--start-cluster"):
             # Look for number of nodes
             if len(args) > 0:
-                StartTestCluster(args[0])
+                start_test_cluster(args[0])
             else:
                 print "Define number of nodes"
         if o in ("--stop-cluster"):
-            StopTestCluster()
+            stop_test_cluster()
         if o in ("--cleanup-containers"):
-            CleanupOrphaned()
+            cleanup_orphaned()
         if o in ("--add-node"):
             if len(args) > 0:
                 for num in range(0, int(args[0])):
-                    AddNode()
+                    add_node()
             else:
                 print "Provide number of nodes"
         if o in ("--remove-node"):
             if len(args) > 0:
                 for num in range(0, int(args[0])):
-                    RemoveNode()
+                    remove_node()
             else:
                 print "Provide number of nodes"
         if o in ("--remove-named-node"):
             if len(args) > 0:
                 for name in args:
-                    RemoveNamedNode(name)
+                    remove_named_node(name)
             else:
                 print "Provide node names"
         if o in ("--start-proxy"):
-            StartProxy()
+            start_proxy()
         if o in ("--stop-proxy"):
-            StopProxy()
+            stop_proxy()
         if o in ("--generate-proxy-cfg"):
-            GenerateMaxScaleConfig()
+            generate_maxscale_config()
 
 
