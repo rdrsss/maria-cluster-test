@@ -5,8 +5,11 @@
 # @breif    : Test script to access a given cluster and test it.
 import os, getopt, sys
 
+import MySQLdb
 
-def Usage():
+
+
+def usage():
     print "usage"
 
 # Main
@@ -22,7 +25,7 @@ if __name__=='__main__':
         print "Args : ", args
     except getopt.GetoptError as err:
         print "opt err: ", str(err)
-        Usage()
+        usage()
         sys.exit(2)
 
 
