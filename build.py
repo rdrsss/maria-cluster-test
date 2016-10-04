@@ -68,7 +68,7 @@ def get_node_ip(node_name):
 # Start proxy node.
 def start_proxy():
     print "Starting proxy service"
-    names = GetClusterContainerNames()
+    names = get_cluster_container_names()
     # Make sure cluster is running
     if not any(CLUSTER_PREFIX+CLUSTER_HOST in n for n in names):
         print "No cluster running, no cluster host found"
@@ -101,7 +101,7 @@ def stop_proxy():
     subprocess.call(["docker", "rm", CLUSTER_PREFIX + PROXY])
 
 # Start the galera cluster host.
-def StartClusterHost(node_name, bind_port):
+def start_cluster_host(node_name, bind_port):
     ps = subprocess.Popen([
         "docker", 
         "run", 
@@ -141,8 +141,8 @@ def StartClusterHost(node_name, bind_port):
     return True
 
 # Start a cluster node, connecting to cluster host.
-def StartClusterNode(node_name, bind_port, ip_address):
-    subprocess.call([
+def start_cluster_node(node_name, bind_port, ip_address):
+    ps = subprocess.Popen([
         "docker", 
         "run", 
         "--name="+node_name, 
@@ -153,10 +153,16 @@ def StartClusterNode(node_name, bind_port, ip_address):
         IMAGE_NAME, 
         "mysqld",
         "--wsrep_cluster_address=gcomm://"+ip_address]) 
+    out, err = ps.communicate()
+    if(len(str(err)) > 0):
+        print "Error starting cluster host : " + err
+        return False
+    if(len(str(out))>0): 
+        print "\t Container id : " + out
     return True
 
 # Parse containers from string buffer.
-def ParseContainerNames(strbuf):
+def parse_container_names(strbuf):
     if len(strbuf) == 0:
         print("Zero len docker ps")
     else:
@@ -174,15 +180,15 @@ def ParseContainerNames(strbuf):
     return []
 
 # Find all containers with cluster prefix
-def GetClusterContainerNames():
+def get_cluster_container_names():
     ps = subprocess.Popen(("docker", "ps"), stdout=subprocess.PIPE)
     out, err = ps.communicate()
-    return ParseContainerNames(out)
+    return parse_container_names(out)
 
 # Get all container ip's
-def GetClusterContainerIps():
+def get_cluster_container_ips():
     # Get container names
-    names = GetClusterContainerNames()
+    names = get_cluster_container_names()
     container_ips = []
     for n in names:
         if n != CLUSTER_PREFIX + PROXY:
@@ -193,7 +199,7 @@ def GetClusterContainerIps():
 def cleanup_orphaned():
     ps = subprocess.Popen(("docker", "ps", "-a"), stdout=subprocess.PIPE)
     out, err = ps.communicate()
-    names = ParseContainerNames(out)
+    names = parse_container_names(out)
     if len(names) > 0:
         print "Cleaning up container names ..."
         for c in names:
@@ -207,7 +213,7 @@ def start_test_cluster(num_nodes):
     build_maria_image()
     # Start cluster
     print "Starting cluster host ..."
-    s = StartClusterHost(CLUSTER_PREFIX + CLUSTER_HOST, str(DEFAULT_PORT))
+    s = start_cluster_host(CLUSTER_PREFIX + CLUSTER_HOST, str(DEFAULT_PORT))
     if s:
         # Get cluster host ip
         ip_address = get_node_ip(CLUSTER_PREFIX + CLUSTER_HOST)
@@ -215,12 +221,12 @@ def start_test_cluster(num_nodes):
         port_num = DEFAULT_PORT + 1
         print "Starting cluster nodes ..."
         for n in range(0, int(num_nodes)):
-            StartClusterNode(CLUSTER_PREFIX + CLUSTER_NODE + str(n), str(port_num), ip_address)
+            start_cluster_node(CLUSTER_PREFIX + CLUSTER_NODE + str(n), str(port_num), ip_address)
             port_num += 1
 
 # Stop already running test cluster.
 def stop_test_cluster():
-    container_names = GetClusterContainerNames()
+    container_names = get_cluster_container_names()
     if len(container_names) > 0:
         print "Stopping containers ..."
         subprocess.call(["docker", "stop"] + container_names)
@@ -232,7 +238,7 @@ def stop_test_cluster():
 # Add node to existing cluster
 def add_node():
     # Get running containers
-    containers = GetClusterContainerNames()
+    containers = get_cluster_container_names()
     if len(containers) > 0:
         # Determine number to increment on
         highest_num = -1
@@ -251,14 +257,14 @@ def add_node():
         new_node_number = str(int(highest_num)+1)
         new_node_port = str(int(port)+1)
         print "adding node : " + new_node_number + " on port : " + new_node_port
-        StartClusterNode(CLUSTER_PREFIX + CLUSTER_NODE + new_node_number, new_node_port, ip_address)
+        start_cluster_node(CLUSTER_PREFIX + CLUSTER_NODE + new_node_number, new_node_port, ip_address)
     else:
         print "No cluster running"
 
 # Remove node from existing cluster
 def remove_node():
     # Get running containers
-    containers = GetClusterContainerNames()
+    containers = get_cluster_container_names()
     if len(containers) > 0:
         # Determine nubmer to decrement on
         highest_num = -1 
@@ -282,7 +288,7 @@ def remove_node():
 # Remove node from existing cluster
 def remove_named_node(name):
     # Get running containers
-    containers = GetClusterContainerNames()
+    containers = get_cluster_container_names()
     if len(containers) > 0:
         # Determine nubmer to decrement on
         print containers
@@ -294,7 +300,7 @@ def remove_named_node(name):
 
 def generate_maxscale_config():
     # Get ip's for all nodes in cluster
-    ips = GetClusterContainerIps()
+    ips = get_cluster_container_ips()
     if len(ips) <= 0 :
         print "Could not resolve cluster node ips"
         return

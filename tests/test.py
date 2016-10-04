@@ -5,9 +5,48 @@
 # @breif    : Test script to access a given cluster and test it.
 import os, getopt, sys
 
-import MySQLdb
+import MySQLdb, _mysql_exceptions
+
+MYSQL_USER = 'test_user'
+MYSQL_PASS = 'beefcake'
+
+MAXSCALE_HOST = '0.0.0.0'
+MAXSCALE_PORT = 10101
+
+TEST_DB = 'test_db'
 
 
+def create_database():
+    try:
+        # Create connection
+        conn = MySQLdb.connect(
+                host=MAXSCALE_HOST, 
+                port=MAXSCALE_PORT,
+                user=MYSQL_USER,
+                passwd=MYSQL_PASS)
+        print 'Creating test database'
+        c = conn.cursor()
+        c.execute('CREATE DATABASE %s;' % TEST_DB)
+        c.close()
+        conn.close()
+    except _mysql_exceptions.OperationalError as err:
+        print 'Create Database exception : ' + str(err)
+
+def drop_database():
+    try:
+        # Create connection
+        conn = MySQLdb.connect(
+                host=MAXSCALE_HOST, 
+                port=MAXSCALE_PORT,
+                user=MYSQL_USER,
+                passwd=MYSQL_PASS)
+        print 'Deleting test database'
+        c = conn.cursor()
+        c.execute('DROP DATABASE %s;' % TEST_DB)
+        c.close()
+        conn.close()
+    except _mysql_exceptions.OperationalError as err:
+        print 'Drop Database exception : ' + str(err)
 
 def usage():
     print "usage"
@@ -27,5 +66,12 @@ if __name__=='__main__':
         print "opt err: ", str(err)
         usage()
         sys.exit(2)
-
+    # Check options
+    for o, a in opts:
+        if o in ("--help"):
+            usage()
+        if o in ("--run"):
+            create_database()
+            # run tests here
+            drop_database()
 
