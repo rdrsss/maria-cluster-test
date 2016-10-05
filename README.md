@@ -9,6 +9,7 @@ This is project is just used as a testbed for me to test and familiarize myself 
                                   [delete] (delete docker image (rmi)).
         --start-cluster         : Start test cluster, brings up host, and nodes attached.
         --stop-cluster          : Stop running test cluster.
+        --restart-cluster       : Restart cluster.
         --cleanup-containers    : Cleanup orphaned containers (rm).
         --add-node              : Add node to existing cluster.
                                   Provide number of nodes to add.
@@ -18,6 +19,7 @@ This is project is just used as a testbed for me to test and familiarize myself 
                                   Provide container names to remove.
         --start-proxy           : Start MaxScale instance.
         --stop-proxy            : Stop MaxScale instnace.
+        --generate-proxy-cfg    : Generate MaxScale config. Run after bringing up a cluster.
 ```
 
 ## Useful links
@@ -32,6 +34,9 @@ This is project is just used as a testbed for me to test and familiarize myself 
 * https://mariadb.com/blog/close-encounter-maxscale
 * https://mariadb.com/kb/en/mariadb-maxscale-14/maxscale-configuration-usage-scenarios/
 * https://mariadb.com/kb/en/mariadb-maxscale-14/readwritesplit/
+
+### MaxAdmin
+* https://mariadb.com/kb/en/mariadb-maxscale-14/maxadmin/
 
 ### Python Style Guide
 * https://google.github.io/styleguide/pyguide.html
