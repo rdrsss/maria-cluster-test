@@ -126,10 +126,10 @@ def start_cluster_host(node_name, bind_port):
 
     out, err = ps.communicate()
     if(len(str(err)) > 0):
-        print "Error starting cluster host : " + err
+        print "Error starting cluster host : " + str(err)
         return False
     if(len(str(out))>0): 
-        print "\t Container id : " + out
+        print "\t Container id : " + str(out)
         time.sleep(1)
         # Setup cluster
         subprocess.call([
@@ -152,13 +152,16 @@ def start_cluster_node(node_name, bind_port, ip_address):
         bind_port + ":3306", 
         IMAGE_NAME, 
         "mysqld",
-        "--wsrep_cluster_address=gcomm://"+ip_address]) 
+        "--wsrep_cluster_address=gcomm://"+ip_address],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE) 
+
     out, err = ps.communicate()
-    if(len(str(err)) > 0):
-        print "Error starting cluster host : " + err
+    if(len(str(err)) > 0 and not str(err) == 'None'):
+        print "Error starting cluster node : " + str(err)
         return False
     if(len(str(out))>0): 
-        print "\t Container id : " + out
+        print "\t Container id : " + str(out)
     return True
 
 # Parse containers from string buffer.
@@ -334,8 +337,9 @@ def generate_maxscale_config():
     config.add_section('Galera Monitor')
     config.set('Galera Monitor', 'type', 'monitor')
     config.set('Galera Monitor', 'module', 'galeramon')
-    #config.set('Galera Monitor', 'disable_master_failback', '1')
+    config.set('Galera Monitor', 'disable_master_failback', '1')
     config.set('Galera Monitor', 'servers', servers)
+    config.set('Galera Monitor', 'monitor_interval', '1000')
     config.set('Galera Monitor', 'user', 'maxscale')
     config.set('Galera Monitor', 'passwd', 'password')
     # Replication Montior
@@ -352,6 +356,8 @@ def generate_maxscale_config():
     config.set('Splitter Service', 'servers', servers)
     config.set('Splitter Service', 'user', 'maxscale')
     config.set('Splitter Service', 'passwd', 'password')
+    config.set('Splitter Service', 'max_slave_connections', '100%')
+    config.set('Splitter Service', 'max_slave_replication_lag', '10')
     # Splitter Listener
     config.add_section('Splitter Listener')
     config.set('Splitter Listener', 'type', 'listener')

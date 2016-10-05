@@ -3,7 +3,7 @@
 # @filename : test.py
 # @author   : Manuel A. Rodriguez (manuel.rdrs@gmail.com)
 # @breif    : Test script to access a given cluster and test it.
-import os, getopt, sys
+import os, getopt, sys, time
 
 import MySQLdb, _mysql_exceptions
 
@@ -14,39 +14,61 @@ MAXSCALE_HOST = '0.0.0.0'
 MAXSCALE_PORT = 10101
 
 TEST_DB = 'test_db'
+TABLE_ACCOUNTS = 'test_accounts'
 
+def execute_statement(statement):
+        # Create connection
+        conn = MySQLdb.connect(
+                host=MAXSCALE_HOST, 
+                port=MAXSCALE_PORT,
+                user=MYSQL_USER,
+                passwd=MYSQL_PASS)
+        c = conn.cursor()
+        c.execute(statement)
+        c.close()
+        conn.close()
 
 def create_database():
     try:
-        # Create connection
-        conn = MySQLdb.connect(
-                host=MAXSCALE_HOST, 
-                port=MAXSCALE_PORT,
-                user=MYSQL_USER,
-                passwd=MYSQL_PASS)
         print 'Creating test database'
-        c = conn.cursor()
-        c.execute('CREATE DATABASE %s;' % TEST_DB)
-        c.close()
-        conn.close()
+        execute_statement('CREATE DATABASE %s;' % TEST_DB)
     except _mysql_exceptions.OperationalError as err:
-        print 'Create Database exception : ' + str(err)
+        print 'Create database exception : ' + str(err)
+    except _mysql_exceptions.ProgrammingError as err:
+        print 'Create database exception : ' + str(err)
+
+def create_table():
+    try:
+        print 'Creating table'
+        statement = '''
+            USE %s;
+            CREATE TABLE %s (
+                AccountID int,
+                Name varchar(255));
+            ''' % (TEST_DB, TABLE_ACCOUNTS)
+        execute_statement(statement)
+    except _mysql_exceptions.OperationalError as err:
+        print 'Create table exception : ' + str(err)
+
+def create_entries():
+    try:
+        print 'Creating entries'
+        for x in range (0, 100):
+            statement = '''
+                USE %s;
+                INSERT INTO %s 
+                VALUES ('%d', '%s');
+                ''' % (TEST_DB, TABLE_ACCOUNTS, x, 'testname')
+            execute_statement(statement)
+    except _mysql_exceptions.OperationalError as err:
+        print 'Create entries exception : ' + str(err)
 
 def drop_database():
     try:
-        # Create connection
-        conn = MySQLdb.connect(
-                host=MAXSCALE_HOST, 
-                port=MAXSCALE_PORT,
-                user=MYSQL_USER,
-                passwd=MYSQL_PASS)
-        print 'Deleting test database'
-        c = conn.cursor()
-        c.execute('DROP DATABASE %s;' % TEST_DB)
-        c.close()
-        conn.close()
+        print 'Delete test database'
+        execute_statement('DROP DATABASE %s;' % TEST_DB)
     except _mysql_exceptions.OperationalError as err:
-        print 'Drop Database exception : ' + str(err)
+        print 'Drop database exception : ' + str(err)
 
 def usage():
     print "usage"
@@ -73,5 +95,8 @@ if __name__=='__main__':
         if o in ("--run"):
             create_database()
             # run tests here
+            create_table()
+            create_entries()
+#            time.sleep(5)
             drop_database()
 
