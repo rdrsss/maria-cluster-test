@@ -23,8 +23,10 @@ This is project is just used as a testbed for me to test and familiarize myself 
 ## Useful links
 ### Mariadb
 * https://mariadb.com/kb/en/mariadb/server-system-variables
+
 ### Galera
 * https://mariadb.com/kb/en/mariadb/getting-started-with-mariadb-galera-cluster/
+
 ### MaxScale
 * https://github.com/mariadb-corporation/MaxScale
 * https://mariadb.com/blog/close-encounter-maxscale
