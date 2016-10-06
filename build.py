@@ -217,6 +217,7 @@ def start_test_cluster(num_nodes):
     # Start cluster
     print "Starting cluster host ..."
     s = start_cluster_host(CLUSTER_PREFIX + CLUSTER_HOST, str(DEFAULT_PORT))
+    time.sleep(1)
     if s:
         # Get cluster host ip
         ip_address = get_node_ip(CLUSTER_PREFIX + CLUSTER_HOST)
@@ -226,6 +227,7 @@ def start_test_cluster(num_nodes):
         for n in range(0, int(num_nodes)):
             start_cluster_node(CLUSTER_PREFIX + CLUSTER_NODE + str(n), str(port_num), ip_address)
             port_num += 1
+            time.sleep(1)
 
 # Stop already running test cluster.
 def stop_test_cluster():
@@ -407,6 +409,7 @@ def usage():
                                   [delete] (delete docker image (rmi)).
         --start-cluster         : Start test cluster, brings up host, and nodes attached.
         --stop-cluster          : Stop running test cluster.
+        --restart-cluster       : Restart cluster.
         --cleanup-containers    : Cleanup orphaned containers (rm).
         --add-node              : Add node to existing cluster.
                                   Provide number of nodes to add.
@@ -429,6 +432,7 @@ if __name__ == '__main__':
                 "image", 
                 "start-cluster", 
                 "stop-cluster", 
+                "restart-cluster",
                 "cleanup-containers", 
                 "add-node", 
                 "remove-node", 
@@ -461,10 +465,22 @@ if __name__ == '__main__':
             # Look for number of nodes
             if len(args) > 0:
                 start_test_cluster(args[0])
+                start_proxy()
             else:
                 print "Define number of nodes"
         if o in ("--stop-cluster"):
             stop_test_cluster()
+        if o in ("--restart-cluster"):
+            if len(args) > 0:
+                # Stop current cluster, host + nodes + proxy.
+                stop_test_cluster()
+                # Cleanup an crashed containers.
+                cleanup_orphaned()
+                # Start up a fresh cluster and proxy.
+                start_test_cluster(args[0])
+                start_proxy()
+            else:
+                print "Define number of nodes"
         if o in ("--cleanup-containers"):
             cleanup_orphaned()
         if o in ("--add-node"):

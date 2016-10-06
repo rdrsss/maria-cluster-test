@@ -53,12 +53,13 @@ def create_table():
 def create_entries():
     try:
         print 'Creating entries'
-        for x in range (0, 100):
+        for x in range (0, 1000):
             statement = '''
                 USE %s;
                 INSERT INTO %s 
                 VALUES ('%d', '%s');
                 ''' % (TEST_DB, TABLE_ACCOUNTS, x, 'testname')
+            #print '\t' + statement
             execute_statement(statement)
     except _mysql_exceptions.OperationalError as err:
         print 'Create entries exception : ' + str(err)
